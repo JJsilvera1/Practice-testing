@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight, BookOpen, Clock } from 'lucide-react'
+import { ChevronRight, BookOpen, Clock, Sun, Moon } from 'lucide-react'
 
 interface Question {
   number: string;
@@ -30,11 +30,17 @@ function App() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [view, setView] = useState<'home' | 'quiz' | 'result'>('home')
   const [history, setHistory] = useState<QuizResult[]>([])
-  const [quizConfig, setQuizConfig] = useState({ count: 10, useTimer: false })
+  const [quizConfig, setQuizConfig] = useState({
+    count: 10,
+    useTimer: false,
+    timerMinutes: 10,
+    sessionType: 'training' as 'training' | 'quiz'
+  })
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [sessionResults, setSessionResults] = useState<QuizResult['questions']>([])
   const [filter, setFilter] = useState<'all' | 'correct' | 'wrong'>('all')
   const [startTime, setStartTime] = useState<number>(0)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
 
   // Load history
   useEffect(() => {
@@ -54,6 +60,15 @@ function App() {
     fetchQuestions()
   }, [])
 
+  // Apply theme to body
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light')
+    } else {
+      document.documentElement.classList.remove('light')
+    }
+  }, [theme])
+
   // Timer logic
   useEffect(() => {
     if (view === 'quiz' && quizConfig.useTimer && timeLeft !== null && timeLeft > 0) {
@@ -72,7 +87,7 @@ function App() {
     setSessionResults([])
     setView('quiz')
     setStartTime(Date.now())
-    if (quizConfig.useTimer) setTimeLeft(quizConfig.count * 60) // 1 min per question
+    if (quizConfig.useTimer) setTimeLeft(quizConfig.timerMinutes * 60)
     else setTimeLeft(null)
   }
 
@@ -131,55 +146,102 @@ function App() {
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Domain Knowledge Hub</p>
           </div>
         </div>
-        {view === 'quiz' && (
-          <div className="flex items-center gap-4">
-            {timeLeft !== null && (
-              <div className={`glass px-4 py-2 flex items-center gap-2 font-mono text-sm ${timeLeft < 60 ? 'text-rose-400 animate-pulse' : 'text-indigo-400'}`}>
-                <Clock size={16} /> {formatTime(timeLeft)}
-              </div>
-            )}
-            <button onClick={handleFinish} className="px-4 py-2 glass bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20">FINISH</button>
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={(e) => { e.stopPropagation(); setTheme(theme === 'dark' ? 'light' : 'dark'); }}
+            className="p-2 glass text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          {view === 'quiz' && (
+            <div className="flex items-center gap-4">
+              {timeLeft !== null && (
+                <div className={`glass px-4 py-2 flex items-center gap-2 font-mono text-sm ${timeLeft < 60 ? 'text-rose-400 animate-pulse' : 'text-indigo-400'}`}>
+                  <Clock size={16} /> {formatTime(timeLeft)}
+                </div>
+              )}
+              <button onClick={handleFinish} className="px-4 py-2 glass bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20">FINISH</button>
+            </div>
+          )}
+        </div>
       </header>
 
-      <main className="w-full max-w-4xl px-4">
+      <main className="w-full max-w-4xl px-4 transition-all duration-300">
         {view === 'home' && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="glass p-10 text-center relative overflow-hidden">
-              <div className="relative z-10">
+              <div className="relative z-10 flex flex-col items-center">
                 <h2 className="text-3xl font-bold mb-4">Ready for Certification?</h2>
                 <p className="text-slate-400 mb-8 max-w-lg mx-auto italic text-sm">Configure your session and dive into {allQuestions.length} AI-refined professional questions.</p>
 
-                <div className="flex flex-wrap justify-center gap-6 mb-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Question Count</label>
+                <div className="flex flex-col items-center gap-6 mb-10 max-w-xl mx-auto">
+                  {/* Row 1: Question Count */}
+                  <div className="w-full space-y-3">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] text-center block">Question Count</label>
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       {[5, 10, 20, 50].map(n => (
-                        <button key={n} onClick={() => setQuizConfig(c => ({ ...c, count: n }))} className={`px-4 py-2 text-xs font-bold glass ${quizConfig.count === n ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-white/5'}`}>{n}</button>
+                        <button key={n} onClick={() => setQuizConfig(c => ({ ...c, count: n }))} className={`px-5 py-2 text-xs font-bold glass transition-all ${quizConfig.count === n ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:bg-white/5'}`}>{n}</button>
                       ))}
-                      <div className="flex items-center glass px-2 bg-white/5 border-dashed border-white/10">
+                      <div className="flex items-center glass px-3 bg-white/5 border-dashed border-white/10">
                         <input
                           type="number"
                           min="1"
                           max={allQuestions.length}
                           value={quizConfig.count}
                           onChange={(e) => setQuizConfig(c => ({ ...c, count: Math.min(allQuestions.length, Math.max(1, parseInt(e.target.value) || 0)) }))}
-                          className="w-16 bg-transparent text-center text-xs font-bold focus:outline-none"
+                          className="w-12 bg-transparent text-center text-xs font-bold focus:outline-none py-1.5"
                         />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase pr-1">Qty</span>
+                        <span className="text-[9px] font-bold text-slate-500 uppercase ml-1">Qty</span>
                       </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Mode</label>
-                    <button onClick={() => setQuizConfig(c => ({ ...c, useTimer: !c.useTimer }))} className={`w-full px-6 py-2 text-xs font-bold glass flex items-center gap-2 ${quizConfig.useTimer ? 'bg-amber-500/20 text-amber-500' : 'text-slate-400'}`}>
-                      <Clock size={14} /> {quizConfig.useTimer ? 'Timed Challenge' : 'Untimed Study'}
-                    </button>
+
+                  <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Column 1: Timer */}
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] text-center block">Timer Settings</label>
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => setQuizConfig(c => ({ ...c, useTimer: !c.useTimer }))} className={`flex-1 px-4 py-2 text-xs font-bold glass flex items-center justify-center gap-2 transition-all ${quizConfig.useTimer ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' : 'text-slate-400 hover:bg-white/5'}`}>
+                          <Clock size={14} /> {quizConfig.useTimer ? 'Active' : 'Disabled'}
+                        </button>
+                        {quizConfig.useTimer && (
+                          <div className="flex items-center glass px-3 bg-white/5 border-dashed border-white/10">
+                            <input
+                              type="number"
+                              min="1"
+                              max="300"
+                              value={quizConfig.timerMinutes}
+                              onChange={(e) => setQuizConfig(c => ({ ...c, timerMinutes: Math.min(300, Math.max(1, parseInt(e.target.value) || 0)) }))}
+                              className="w-10 bg-transparent text-center text-xs font-bold focus:outline-none py-1.5"
+                            />
+                            <span className="text-[9px] font-bold text-slate-500 uppercase ml-1">Min</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Column 2: Session Type */}
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] text-center block">Session Type</label>
+                      <div className="flex glass p-1 gap-1">
+                        <button
+                          onClick={() => setQuizConfig(c => ({ ...c, sessionType: 'training' }))}
+                          className={`flex-1 py-1.5 text-[10px] font-bold uppercase transition-all ${quizConfig.sessionType === 'training' ? 'bg-indigo-500 text-white rounded-xl shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
+                        >
+                          Training
+                        </button>
+                        <button
+                          onClick={() => setQuizConfig(c => ({ ...c, sessionType: 'quiz' }))}
+                          className={`flex-1 py-1.5 text-[10px] font-bold uppercase transition-all ${quizConfig.sessionType === 'quiz' ? 'bg-indigo-500 text-white rounded-xl shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
+                        >
+                          Quiz
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <button onClick={startQuiz} className="px-12 py-4 glass bg-indigo-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-indigo-500/20 transition-all active:scale-95">START SESSION</button>
+                <button onClick={startQuiz} className="px-16 py-4 glass bg-indigo-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-indigo-500/30 transition-all active:scale-95">START MISSION</button>
               </div>
             </div>
 
@@ -188,7 +250,7 @@ function App() {
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] px-2">Recent Session History</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {history.slice(0, 4).map(res => (
-                    <div key={res.id} className="glass p-5 flex justify-between items-center group hover:border-indigo-500/30 transition-colors">
+                    <div key={res.id} className="glass p-5 flex justify-between items-center group hover:border-indigo-500/30 transition-all">
                       <div>
                         <div className="text-xs text-slate-500 font-bold mb-1">{res.date}</div>
                         <div className="text-xl font-bold">{res.score} <span className="text-slate-500 text-sm font-normal">/ {res.total}</span></div>
@@ -217,28 +279,47 @@ function App() {
             <h2 className="text-xl md:text-2xl font-medium leading-relaxed mb-10 text-slate-100 italic">{activeQuestions[currentIndex].question}</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
-              {Object.entries(activeQuestions[currentIndex].options).map(([key, val]) => (
-                <button
-                  key={key}
-                  onClick={() => handleSelect(key)}
-                  className={`option-button !mb-0 min-h-[60px] !p-4 !text-sm ${selectedAnswer === key ? 'selected' : ''} ${selectedAnswer && key === activeQuestions[currentIndex].answer ? 'correct' : ''} ${selectedAnswer === key && key !== activeQuestions[currentIndex].answer ? 'incorrect' : ''}`}
-                >
-                  <span className="flex-shrink-0 w-6 h-6 glass flex items-center justify-center font-bold text-[10px]">{key}</span>
-                  <span className="flex-1">{val}</span>
-                </button>
-              ))}
+              {Object.entries(activeQuestions[currentIndex].options).map(([key, val]) => {
+                const isSelected = selectedAnswer === key;
+                const showOutcome = quizConfig.sessionType === 'training' && selectedAnswer;
+                const isCorrect = showOutcome && key === activeQuestions[currentIndex].answer;
+                const isIncorrect = showOutcome && isSelected && key !== activeQuestions[currentIndex].answer;
+
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleSelect(key)}
+                    className={`option-button !mb-0 min-h-[60px] !p-4 !text-sm transition-all ${isSelected ? 'selected' : ''} ${isCorrect ? 'correct' : ''} ${isIncorrect ? 'incorrect' : ''}`}
+                  >
+                    <span className="flex-shrink-0 w-6 h-6 glass flex items-center justify-center font-bold text-[10px]">{key}</span>
+                    <span className="flex-1 transition-all">{val}</span>
+                  </button>
+                )
+              })}
             </div>
 
-            {selectedAnswer && (
+            {selectedAnswer && quizConfig.sessionType === 'quiz' && (
+              <button
+                onClick={handleNext}
+                className="w-full py-4 glass bg-indigo-500 text-white font-bold flex items-center justify-center gap-2 transition-all hover:bg-indigo-600 shadow-xl"
+              >
+                PROCEED TO NEXT <ChevronRight size={18} />
+              </button>
+            )}
+
+            {selectedAnswer && quizConfig.sessionType === 'training' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl bg-white/5 border border-white/10">
                 <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><BookOpen size={14} /> Comprehensive Rationale</h3>
                 <div className="space-y-3 mb-6">
-                  {Object.entries(activeQuestions[currentIndex].justification).map(([key, ex]) => (
-                    <div key={key} className="flex gap-3 items-start opacity-80">
-                      <span className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold ${key === activeQuestions[currentIndex].answer ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-500'}`}>{key}</span>
-                      <p className="text-xs text-slate-400 leading-relaxed italic">{ex}</p>
-                    </div>
-                  ))}
+                  {Object.entries(activeQuestions[currentIndex].justification).map(([key, ex]) => {
+                    const isCorrectAnswer = key === activeQuestions[currentIndex].answer;
+                    return (
+                      <div key={key} className="flex gap-3 items-start opacity-80">
+                        <span className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold ${isCorrectAnswer ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-500'}`}>{key}</span>
+                        <p className={`text-xs text-slate-400 leading-relaxed italic ${isCorrectAnswer ? 'font-bold' : ''}`}>"{ex}"</p>
+                      </div>
+                    )
+                  })}
                 </div>
                 <button onClick={handleNext} className="w-full py-4 glass bg-indigo-500/20 hover:bg-indigo-500 text-white font-bold flex items-center justify-center gap-2 transition-all">NEXT QUESTION <ChevronRight size={18} /></button>
               </motion.div>
@@ -277,20 +358,20 @@ function App() {
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Question Review</h3>
                 <div className="flex gap-2">
                   {(['all', 'correct', 'wrong'] as const).map(f => (
-                    <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 text-[10px] font-bold glass uppercase ${filter === f ? 'bg-white/10 text-white' : 'text-slate-500'}`}>{f}</button>
+                    <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 text-[10px] font-bold glass uppercase transition-all ${filter === f ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:text-slate-400'}`}>{f}</button>
                   ))}
                 </div>
               </div>
               <div className="space-y-4 pb-20">
                 {sessionResults.filter(r => filter === 'all' ? true : (filter === 'correct' ? r.isCorrect : !r.isCorrect)).map((res, i) => (
-                  <div key={i} className={`glass p-6 border-l-4 ${res.isCorrect ? 'border-l-emerald-500' : 'border-l-rose-500'}`}>
+                  <div key={i} className={`glass p-6 border-l-4 transition-all ${res.isCorrect ? 'border-l-emerald-500 shadow-emerald-500/5' : 'border-l-rose-500 shadow-rose-500/5'}`}>
                     <p className="text-sm font-medium mb-4 italic text-slate-200">{res.question.question}</p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
                       {Object.entries(res.question.options).map(([key, val]) => (
-                        <div key={key} className={`p-3 rounded-xl border text-[11px] flex gap-3 items-center ${key === res.question.answer ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : (key === res.userAnswer ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-white/5 border-white/5 text-slate-500')}`}>
+                        <div key={key} className={`p-3 rounded-xl border text-[11px] flex gap-3 items-center ${key === res.question.answer ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : (key === res.userAnswer ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' : 'bg-white/5 border-white/5 text-slate-500 opacity-60')}`}>
                           <span className="font-bold">{key}</span>
-                          <span className="flex-1 opacity-80">{val}</span>
+                          <span className="flex-1">{val}</span>
                         </div>
                       ))}
                     </div>
@@ -299,17 +380,20 @@ function App() {
                       <h4 className="text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
                         <BookOpen size={12} /> Detailed Rationale
                       </h4>
-                      {Object.entries(res.question.justification).map(([key, ex]) => (
-                        <div key={key} className="flex gap-3 items-start opacity-70">
-                          <span className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold ${key === res.question.answer ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-500'}`}>{key}</span>
-                          <p className="text-[11px] text-slate-400 leading-relaxed italic">{ex}</p>
-                        </div>
-                      ))}
+                      {Object.entries(res.question.justification).map(([key, ex]) => {
+                        const isCorrectAnswer = key === res.question.answer;
+                        return (
+                          <div key={key} className="flex gap-3 items-start opacity-70">
+                            <span className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold ${isCorrectAnswer ? 'bg-emerald-500 text-white' : 'bg-white/10 text-slate-500'}`}>{key}</span>
+                            <p className={`text-[11px] text-slate-400 leading-relaxed italic ${isCorrectAnswer ? 'font-bold' : ''}`}>"{ex}"</p>
+                          </div>
+                        )
+                      })}
                     </div>
 
                     <div className="mt-4 flex gap-4 items-center pt-4 border-t border-white/5">
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Your Selection: <span className={res.isCorrect ? 'text-emerald-400' : 'text-rose-400'}>{res.userAnswer}</span></div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Registry Answer: <span className="text-emerald-400">{res.question.answer}</span></div>
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Your Selection: <span className={res.isCorrect ? 'text-emerald-400' : 'text-rose-400'}>{res.userAnswer}</span></div>
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Registry Answer: <span className="text-emerald-400">{res.question.answer}</span></div>
                     </div>
                   </div>
                 ))}

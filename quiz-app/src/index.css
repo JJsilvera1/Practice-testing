@@ -9,6 +9,20 @@
   --text-secondary: #94a3b8;
   --success: #10b981;
   --error: #ef4444;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --card-shadow-color: rgba(0, 0, 0, 0.37);
+}
+
+:root.light {
+  --bg-deep: #f8fafc;
+  --accent-primary: #4f46e5;
+  --accent-secondary: #9333ea;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --card-shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 @theme {
@@ -18,10 +32,16 @@
 
 @layer base {
   body {
-    @apply bg-[#0a0a0f] text-[#f8fafc] font-sans antialiased min-h-screen p-0 m-0 flex flex-col items-center;
+    @apply bg-[var(--bg-deep)] text-[var(--text-primary)] font-sans antialiased min-h-screen p-0 m-0 flex flex-col items-center transition-colors duration-300;
     background-image:
       radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
       radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
+  }
+
+  :root.light body {
+    background-image:
+      radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.05) 0%, transparent 40%);
   }
 
   #root {
@@ -38,31 +58,45 @@
 
 @layer components {
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    @apply rounded-3xl transition-all duration-300;
   }
 
   .card-shadow {
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    box-shadow: 0 8px 32px 0 var(--card-shadow-color);
   }
 
   .gradient-text {
     @apply bg-gradient-to-br from-indigo-400 to-purple-500 bg-clip-text text-transparent;
   }
 
+  :root.light .gradient-text {
+    @apply from-indigo-600 to-purple-700;
+  }
+
   .option-button {
-    @apply w-full p-5 mb-3 rounded-2xl bg-white/5 border border-white/5 text-left text-slate-400 text-lg transition-all duration-200 flex items-center gap-4 hover:bg-white/10 hover:border-white/20 hover:text-white active:scale-[0.98];
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    @apply w-full p-5 mb-3 rounded-2xl text-left text-[var(--text-secondary)] text-lg transition-all duration-200 flex items-center gap-4 hover:bg-white/10 hover:border-white/20 active:scale-[0.98];
+  }
+
+  :root.light .option-button {
+    @apply hover:bg-white/40;
   }
 
   .option-button.selected {
-    @apply bg-indigo-500/10 border-indigo-500/50 text-white;
+    @apply bg-indigo-500/10 border-indigo-500/50 text-[var(--text-primary)];
   }
 
   .option-button.correct {
-    @apply bg-emerald-500/10 border-emerald-500/50 text-white;
+    @apply bg-emerald-500/10 border-emerald-500/50 text-[var(--text-primary)];
   }
 
   .option-button.incorrect {
-    @apply bg-rose-500/10 border-rose-500/50 text-white;
+    @apply bg-rose-500/10 border-rose-500/50 text-[var(--text-primary)];
   }
 }
 
