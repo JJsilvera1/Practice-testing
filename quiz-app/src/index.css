@@ -16,13 +16,41 @@
 
 :root.light {
   --bg-deep: #f8fafc;
-  --accent-primary: #4f46e5;
-  --accent-secondary: #9333ea;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(0, 0, 0, 0.05);
-  --card-shadow-color: rgba(0, 0, 0, 0.1);
+  --accent-primary: #4338ca;
+  --accent-secondary: #7e22ce;
+  --text-primary: #020617;
+  --text-secondary: #334155;
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.12);
+  --card-shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Light Mode Overrides for Slate Utilities */
+:root.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+/* Darker slate-600 equivalent */
+:root.light .text-slate-500 {
+  color: #1e293b !important;
+}
+
+/* Darker slate-800 equivalent */
+:root.light .text-slate-600 {
+  color: #0f172a !important;
+}
+
+/* Darker slate-900 equivalent */
+:root.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+:root.light .text-slate-100 {
+  color: #0f172a !important;
+}
+
+:root.light .text-slate-300 {
+  color: #334155 !important;
 }
 
 @theme {

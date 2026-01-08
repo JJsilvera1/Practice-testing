@@ -41,6 +41,7 @@ function App() {
   const [filter, setFilter] = useState<'all' | 'correct' | 'wrong'>('all')
   const [startTime, setStartTime] = useState<number>(0)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [isConfirmed, setIsConfirmed] = useState(false)
 
   // Load history
   useEffect(() => {
@@ -87,28 +88,42 @@ function App() {
     setSessionResults([])
     setView('quiz')
     setStartTime(Date.now())
+    setIsConfirmed(false)
     if (quizConfig.useTimer) setTimeLeft(quizConfig.timerMinutes * 60)
     else setTimeLeft(null)
   }
 
   const handleSelect = (key: string) => {
-    if (selectedAnswer) return
+    if (isConfirmed) return
     setSelectedAnswer(key)
+    // Note: sessionResults update moved to confirmation step
+  }
+
+  const recordCurrentResult = () => {
+    if (!selectedAnswer) return
     const current = activeQuestions[currentIndex]
     setSessionResults(prev => [...prev, {
       question: current,
-      userAnswer: key,
-      isCorrect: key === current.answer
+      userAnswer: selectedAnswer,
+      isCorrect: selectedAnswer === current.answer
     }])
   }
 
   const handleNext = () => {
+    if (quizConfig.sessionType === 'quiz') recordCurrentResult()
+
     if (currentIndex < activeQuestions.length - 1) {
       setCurrentIndex(i => i + 1)
       setSelectedAnswer(null)
+      setIsConfirmed(false)
     } else {
       handleFinish()
     }
+  }
+
+  const handleConfirm = () => {
+    setIsConfirmed(true)
+    recordCurrentResult()
   }
 
   const handleFinish = () => {
@@ -271,7 +286,7 @@ function App() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass p-8 relative">
             <div className="flex items-center gap-2 mb-6">
               <span className="px-3 py-1 glass bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-wider">Q {currentIndex + 1}</span>
-              <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden ml-2">
+              <div className="h-1 flex-1 bg-indigo-500/10 rounded-full overflow-hidden ml-2">
                 <motion.div animate={{ width: `${((currentIndex + 1) / activeQuestions.length) * 100}%` }} className="h-full bg-indigo-500" />
               </div>
             </div>
@@ -281,7 +296,7 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
               {Object.entries(activeQuestions[currentIndex].options).map(([key, val]) => {
                 const isSelected = selectedAnswer === key;
-                const showOutcome = quizConfig.sessionType === 'training' && selectedAnswer;
+                const showOutcome = (quizConfig.sessionType === 'training' && isConfirmed);
                 const isCorrect = showOutcome && key === activeQuestions[currentIndex].answer;
                 const isIncorrect = showOutcome && isSelected && key !== activeQuestions[currentIndex].answer;
 
@@ -307,7 +322,16 @@ function App() {
               </button>
             )}
 
-            {selectedAnswer && quizConfig.sessionType === 'training' && (
+            {selectedAnswer && quizConfig.sessionType === 'training' && !isConfirmed && (
+              <button
+                onClick={handleConfirm}
+                className="w-full py-4 glass bg-indigo-500 text-white font-bold flex items-center justify-center gap-2 transition-all hover:bg-indigo-600 shadow-xl"
+              >
+                CHECK ANSWER <ChevronRight size={18} />
+              </button>
+            )}
+
+            {isConfirmed && quizConfig.sessionType === 'training' && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-6 rounded-2xl bg-white/5 border border-white/10">
                 <h3 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2"><BookOpen size={14} /> Comprehensive Rationale</h3>
                 <div className="space-y-3 mb-6">
