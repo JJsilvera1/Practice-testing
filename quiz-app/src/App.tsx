@@ -8,6 +8,7 @@ interface Question {
   options: Record<string, string>;
   answer: string;
   justification: Record<string, string>;
+  domain?: number;
 }
 
 interface QuizResult {
@@ -34,7 +35,8 @@ function App() {
     count: 10,
     useTimer: false,
     timerMinutes: 10,
-    sessionType: 'training' as 'training' | 'quiz'
+    sessionType: 'training' as 'training' | 'quiz',
+    domains: [1, 2, 3, 4]
   })
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [sessionResults, setSessionResults] = useState<QuizResult['questions']>([])
@@ -53,10 +55,16 @@ function App() {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const response = await fetch('/questions.json.checkpoint')
+        const response = await fetch('/questions.json')
         const data = await response.json()
-        if (data.questions) setAllQuestions(data.questions)
-      } catch (e) { console.error(e) }
+        if (Array.isArray(data)) {
+          setAllQuestions(data)
+        } else if (data.questions) {
+          setAllQuestions(data.questions)
+        }
+      } catch (e) {
+        console.error("Failed to load questions:", e)
+      }
     }
     fetchQuestions()
   }, [])
@@ -81,7 +89,11 @@ function App() {
   }, [view, timeLeft, quizConfig.useTimer])
 
   const startQuiz = () => {
-    const shuffled = [...allQuestions].sort(() => Math.random() - 0.5).slice(0, quizConfig.count)
+    let filtered = [...allQuestions]
+    if (quizConfig.domains.length > 0) {
+      filtered = filtered.filter(q => q.domain && quizConfig.domains.includes(q.domain))
+    }
+    const shuffled = filtered.sort(() => Math.random() - 0.5).slice(0, quizConfig.count)
     setActiveQuestions(shuffled)
     setCurrentIndex(0)
     setSelectedAnswer(null)
@@ -187,7 +199,7 @@ function App() {
             <div className="glass p-10 text-center relative overflow-hidden">
               <div className="relative z-10 flex flex-col items-center">
                 <h2 className="text-3xl font-bold mb-4">Ready for Certification?</h2>
-                <p className="text-slate-400 mb-8 max-w-lg mx-auto italic text-sm">Configure your session and dive into {allQuestions.length} AI-refined professional questions.</p>
+                <p className="text-slate-400 mb-8 max-w-lg mx-auto italic text-sm">Configure your session and dive into 1,000 official CISM questions organized by domain.</p>
 
                 <div className="flex flex-col items-center gap-6 mb-10 max-w-xl mx-auto">
                   {/* Row 1: Question Count */}
@@ -208,6 +220,26 @@ function App() {
                         />
                         <span className="text-[9px] font-bold text-slate-500 uppercase ml-1">Qty</span>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full space-y-3">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] text-center block">Target Domains</label>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {[1, 2, 3, 4].map(d => (
+                        <button
+                          key={d}
+                          onClick={() => setQuizConfig(c => ({
+                            ...c,
+                            domains: c.domains.includes(d)
+                              ? c.domains.filter(x => x !== d)
+                              : [...c.domains, d]
+                          }))}
+                          className={`px-4 py-2 text-[10px] font-bold glass transition-all border ${quizConfig.domains.includes(d) ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' : 'text-slate-500 border-white/5 hover:bg-white/5'}`}
+                        >
+                          DOMAIN {d}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -284,9 +316,14 @@ function App() {
 
         {view === 'quiz' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass p-8 relative">
-            <div className="flex items-center gap-2 mb-6">
-              <span className="px-3 py-1 glass bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-wider">Q {currentIndex + 1}</span>
-              <div className="h-1 flex-1 bg-indigo-500/10 rounded-full overflow-hidden ml-2">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 glass bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-wider">Q {currentIndex + 1}</span>
+                {activeQuestions[currentIndex].domain && (
+                  <span className="px-3 py-1 glass bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">Domain {activeQuestions[currentIndex].domain}</span>
+                )}
+              </div>
+              <div className="h-1 flex-1 bg-indigo-500/10 rounded-full overflow-hidden ml-4">
                 <motion.div animate={{ width: `${((currentIndex + 1) / activeQuestions.length) * 100}%` }} className="h-full bg-indigo-500" />
               </div>
             </div>
@@ -377,6 +414,32 @@ function App() {
               </div>
             </div>
 
+            {sessionResults.length > 0 && Array.from(new Set(sessionResults.map(r => r.question.domain))).length > 1 && (
+              <div className="glass p-8 space-y-6">
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-4">Domain Strength Breakdown</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[1, 2, 3, 4].filter(d => sessionResults.some(r => r.question.domain === d)).map(domainNum => {
+                    const domainQs = sessionResults.filter(r => r.question.domain === domainNum);
+                    const correct = domainQs.filter(r => r.isCorrect).length;
+                    const total = domainQs.length;
+                    const percent = Math.round((correct / total) * 100);
+
+                    return (
+                      <div key={domainNum} className="space-y-2">
+                        <div className="flex justify-between items-end">
+                          <span className="text-xs font-bold text-slate-300">Domain {domainNum}</span>
+                          <span className={`text-xs font-mono font-bold ${percent >= 80 ? 'text-emerald-400' : percent >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>{percent}% <span className="text-[10px] text-slate-500 font-normal">({correct}/{total})</span></span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} transition={{ duration: 1, delay: 0.2 }} className={`h-full rounded-full ${percent >= 80 ? 'bg-emerald-500' : percent >= 60 ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div className="flex justify-between items-end px-2">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Question Review</h3>
@@ -389,6 +452,12 @@ function App() {
               <div className="space-y-4 pb-20">
                 {sessionResults.filter(r => filter === 'all' ? true : (filter === 'correct' ? r.isCorrect : !r.isCorrect)).map((res, i) => (
                   <div key={i} className={`glass p-6 border-l-4 transition-all ${res.isCorrect ? 'border-l-emerald-500 shadow-emerald-500/5' : 'border-l-rose-500 shadow-rose-500/5'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[9px] font-bold text-slate-500 bg-white/5 px-2 py-0.5 rounded uppercase tracking-wider">Number {res.question.number}</span>
+                      {res.question.domain && (
+                        <span className="text-[9px] font-bold text-amber-500/80 bg-amber-500/5 px-2 py-0.5 rounded uppercase tracking-wider border border-amber-500/10">Domain {res.question.domain}</span>
+                      )}
+                    </div>
                     <p className="text-sm font-medium mb-4 italic text-slate-200">{res.question.question}</p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
