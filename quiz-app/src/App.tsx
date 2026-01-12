@@ -17,6 +17,7 @@ interface QuizResult {
   score: number;
   total: number;
   timeSpent: number;
+  scaledScore?: number;
   questions: Array<{
     question: Question;
     userAnswer: string;
@@ -138,15 +139,48 @@ function App() {
     recordCurrentResult()
   }
 
+  const calculateScaledScore = (results: QuizResult['questions']) => {
+    const weights: Record<number, number> = { 1: 0.17, 2: 0.20, 3: 0.33, 4: 0.30 };
+    const domainStats: Record<number, { correct: number; total: number }> = {};
+
+    results.forEach(r => {
+      const d = r.question.domain || 1;
+      if (!domainStats[d]) domainStats[d] = { correct: 0, total: 0 };
+      domainStats[d].total++;
+      if (r.isCorrect) domainStats[d].correct++;
+    });
+
+    let totalWeight = 0;
+    let weightedAccuracy = 0;
+
+    Object.keys(domainStats).forEach(dKey => {
+      const d = parseInt(dKey);
+      const stats = domainStats[d];
+      const accuracy = stats.correct / stats.total;
+      weightedAccuracy += accuracy * weights[d];
+      totalWeight += weights[d];
+    });
+
+    if (totalWeight === 0) return 200;
+
+    // Normalize accuracy based on tested domains
+    const normalizedAccuracy = weightedAccuracy / totalWeight;
+    // Scale 0-1 to 200-800
+    return Math.round(200 + (normalizedAccuracy * 600));
+  }
+
   const handleFinish = () => {
     const timeSpent = Math.floor((Date.now() - startTime) / 1000)
     const score = sessionResults.filter(r => r.isCorrect).length
+    const scaledScore = calculateScaledScore(sessionResults)
+
     const newResult: QuizResult = {
       id: Date.now().toString(),
       date: new Date().toLocaleDateString(),
       score,
       total: activeQuestions.length,
       timeSpent,
+      scaledScore,
       questions: sessionResults
     }
     const updatedHistory = [newResult, ...history]
@@ -402,11 +436,24 @@ function App() {
                 </div>
               </div>
               <div className="flex-1 space-y-4 text-center md:text-left">
-                <h2 className="text-3xl font-bold">Session Overview</h2>
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <h2 className="text-3xl font-bold">Session Overview</h2>
+                  {sessionResults.length > 0 && (
+                    <div className="flex gap-2 justify-center">
+                      <div className={`px-4 py-1.5 rounded-full text-xs font-black tracking-tighter shadow-lg ${calculateScaledScore(sessionResults) >= 450 ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-rose-500/20'}`}>
+                        {calculateScaledScore(sessionResults) >= 450 ? 'EXAM PASS' : 'BELOW TARGET'}
+                      </div>
+                      <div className="px-4 py-1.5 glass bg-white/5 border border-white/10 text-xs font-mono font-bold text-indigo-400">
+                        SCALED: {calculateScaledScore(sessionResults)}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-4 justify-center md:justify-start">
                   <div className="px-4 py-2 glass bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase">{sessionResults.filter(r => r.isCorrect).length} Correct</div>
                   <div className="px-4 py-2 glass bg-rose-500/10 text-rose-400 text-xs font-bold uppercase">{sessionResults.filter(r => !r.isCorrect).length} Wrong</div>
                 </div>
+                <p className="text-[11px] text-slate-500 italic max-w-md">Calculated using official CISM domain weights (17/20/33/30) and scaled to 200-800. Target score is 450.</p>
                 <div className="flex flex-wrap gap-3 mt-4 justify-center md:justify-start no-print">
                   <button onClick={() => setView('home')} className="px-8 py-3 glass bg-white/5 text-slate-300 font-bold text-sm hover:bg-indigo-500 hover:text-white border border-white/5">BACK TO DASHBOARD</button>
                   <button onClick={() => window.print()} className="px-8 py-3 glass bg-indigo-500 text-white font-bold text-sm hover:bg-indigo-600 border border-indigo-400/20">PRINT RESULTS</button>
