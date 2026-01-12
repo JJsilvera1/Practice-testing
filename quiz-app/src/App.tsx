@@ -36,7 +36,7 @@ function App() {
     count: 10,
     useTimer: false,
     timerMinutes: 10,
-    sessionType: 'training' as 'training' | 'quiz',
+    sessionType: 'training' as 'training' | 'quiz' | 'exam',
     domains: [1, 2, 3, 4]
   })
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
@@ -45,8 +45,9 @@ function App() {
   const [startTime, setStartTime] = useState<number>(0)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [isConfirmed, setIsConfirmed] = useState(false)
+  const [bankOpen, setBankOpen] = useState(false)
 
-  // Load history
+  // Load history & views
   useEffect(() => {
     const saved = localStorage.getItem('cism_history')
     if (saved) setHistory(JSON.parse(saved))
@@ -90,11 +91,43 @@ function App() {
   }, [view, timeLeft, quizConfig.useTimer])
 
   const startQuiz = () => {
-    let filtered = [...allQuestions]
-    if (quizConfig.domains.length > 0) {
-      filtered = filtered.filter(q => q.domain && quizConfig.domains.includes(q.domain))
+    const viewCounts = JSON.parse(localStorage.getItem('cism_question_counts') || '{}');
+
+    // Helper to pick least seen
+    const pickLeastSeen = (arr: Question[], count: number) => {
+      return arr
+        .sort((a, b) => {
+          const countA = viewCounts[a.number] || 0;
+          const countB = viewCounts[b.number] || 0;
+          if (countA !== countB) return countA - countB;
+          return Math.random() - 0.5; // Randomize within same view tier
+        })
+        .slice(0, count);
+    };
+
+    let shuffled: Question[] = [];
+
+    if (quizConfig.sessionType === 'exam') {
+      const counts = { 1: 26, 2: 30, 3: 50, 4: 44 };
+      const d1 = allQuestions.filter(q => q.domain === 1);
+      const d2 = allQuestions.filter(q => q.domain === 2);
+      const d3 = allQuestions.filter(q => q.domain === 3);
+      const d4 = allQuestions.filter(q => q.domain === 4);
+
+      shuffled = [
+        ...pickLeastSeen(d1, counts[1]),
+        ...pickLeastSeen(d2, counts[2]),
+        ...pickLeastSeen(d3, counts[3]),
+        ...pickLeastSeen(d4, counts[4])
+      ].sort(() => Math.random() - 0.5);
+    } else {
+      let filtered = [...allQuestions]
+      if (quizConfig.domains.length > 0) {
+        filtered = filtered.filter(q => q.domain && quizConfig.domains.includes(q.domain))
+      }
+      shuffled = pickLeastSeen(filtered, quizConfig.count);
     }
-    const shuffled = filtered.sort(() => Math.random() - 0.5).slice(0, quizConfig.count)
+
     setActiveQuestions(shuffled)
     setCurrentIndex(0)
     setSelectedAnswer(null)
@@ -102,8 +135,13 @@ function App() {
     setView('quiz')
     setStartTime(Date.now())
     setIsConfirmed(false)
-    if (quizConfig.useTimer) setTimeLeft(quizConfig.timerMinutes * 60)
-    else setTimeLeft(null)
+    if (quizConfig.sessionType === 'exam') {
+      setTimeLeft(240 * 60) // 4 Hours
+    } else if (quizConfig.useTimer) {
+      setTimeLeft(quizConfig.timerMinutes * 60)
+    } else {
+      setTimeLeft(null)
+    }
   }
 
   const handleSelect = (key: string) => {
@@ -115,6 +153,12 @@ function App() {
   const recordCurrentResult = () => {
     if (!selectedAnswer) return
     const current = activeQuestions[currentIndex]
+
+    // Update question attempt counts
+    const counts = JSON.parse(localStorage.getItem('cism_question_counts') || '{}')
+    counts[current.number] = (counts[current.number] || 0) + 1
+    localStorage.setItem('cism_question_counts', JSON.stringify(counts))
+
     setSessionResults(prev => [...prev, {
       question: current,
       userAnswer: selectedAnswer,
@@ -123,7 +167,7 @@ function App() {
   }
 
   const handleNext = () => {
-    if (quizConfig.sessionType === 'quiz') recordCurrentResult()
+    if (quizConfig.sessionType !== 'training') recordCurrentResult()
 
     if (currentIndex < activeQuestions.length - 1) {
       setCurrentIndex(i => i + 1)
@@ -213,6 +257,13 @@ function App() {
             className="p-2 glass text-indigo-400 hover:text-indigo-300 transition-colors"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setBankOpen(true); }}
+            className="p-2 glass text-amber-400 hover:text-amber-300 transition-colors"
+            title="Quiz Bank Progress"
+          >
+            <BookOpen size={20} />
           </button>
           {view === 'quiz' && (
             <div className="flex items-center gap-4">
@@ -317,10 +368,26 @@ function App() {
                         >
                           Quiz
                         </button>
+                        <button
+                          onClick={() => setQuizConfig(c => ({ ...c, sessionType: 'exam' }))}
+                          className={`flex-1 py-1.5 text-[10px] font-bold uppercase transition-all ${quizConfig.sessionType === 'exam' ? 'bg-amber-500 text-white rounded-xl shadow-md' : 'text-slate-500 hover:text-slate-400'}`}
+                        >
+                          Exam
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {quizConfig.sessionType === 'exam' && (
+                  <div className="mb-8 p-4 glass bg-amber-500/5 border border-amber-500/20 rounded-2xl max-w-md animate-in fade-in zoom-in-95">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">High-Stakes Mode Active</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed italic">The <span className="text-slate-200 font-bold">Official Exam</span> simulates the real CISM test. You will have <span className="text-amber-400 font-bold">4 Hours</span> to complete <span className="text-amber-400 font-bold">150 Questions</span> sampled across all domains according to ISACA weights.</p>
+                  </div>
+                )}
 
                 <button onClick={startQuiz} className="px-16 py-4 glass bg-indigo-500 text-white font-bold text-lg hover:shadow-2xl hover:shadow-indigo-500/30 transition-all active:scale-95">START MISSION</button>
               </div>
@@ -542,6 +609,75 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Quiz Bank Modal */}
+      {bankOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="glass w-full max-w-2xl p-8 relative overflow-hidden"
+          >
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h2 className="text-2xl font-bold">Question Bank <span className="gradient-text">Progress</span></h2>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Coverage Analytics</p>
+              </div>
+              <button
+                onClick={() => setBankOpen(false)}
+                className="p-2 hover:bg-white/5 rounded-full text-slate-400 transition-colors"
+              >
+                <ChevronRight className="rotate-90" size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-8">
+              {[1, 2, 3, 4].map(domainNum => {
+                const domainQuestions = allQuestions.filter(q => q.domain === domainNum);
+                const viewCounts = JSON.parse(localStorage.getItem('cism_question_counts') || '{}');
+                const seenCount = domainQuestions.filter(q => viewCounts[q.number] > 0).length;
+                const totalInDomain = domainQuestions.length;
+                const coveragePercent = Math.round((seenCount / totalInDomain) * 100);
+
+                // Average times through (Total views / Total questions)
+                const totalViews = domainQuestions.reduce((acc, q) => acc + (viewCounts[q.number] || 0), 0);
+                const avgViews = (totalViews / totalInDomain).toFixed(1);
+
+                return (
+                  <div key={domainNum} className="space-y-3">
+                    <div className="flex justify-between items-end">
+                      <div className="flex items-center gap-3">
+                        <span className="w-8 h-8 glass flex items-center justify-center border-amber-500/20 text-amber-500 font-bold text-xs">{domainNum}</span>
+                        <div>
+                          <div className="text-xs font-bold text-slate-200">Domain {domainNum}</div>
+                          <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{seenCount} / {totalInDomain} Questions Seen</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xl font-black text-indigo-400">{coveragePercent}%</div>
+                        <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">{avgViews}x Avg Depth</div>
+                      </div>
+                    </div>
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${coveragePercent}%` }}
+                        className="h-full bg-gradient-to-r from-indigo-500 to-amber-500"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-10 pt-6 border-t border-white/5 text-center">
+              <p className="text-[11px] text-slate-500 italic max-w-sm mx-auto">
+                "Coverage" indicates unique questions seen at least once. "Depth" tracks how many times you've cycled through the entire domain bank.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }
