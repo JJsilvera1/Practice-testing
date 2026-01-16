@@ -47,11 +47,49 @@ function App() {
   const [isConfirmed, setIsConfirmed] = useState(false)
   const [bankOpen, setBankOpen] = useState(false)
 
-  // Load history & views
+  // Load history & session
   useEffect(() => {
-    const saved = localStorage.getItem('cism_history')
-    if (saved) setHistory(JSON.parse(saved))
+    const savedHistory = localStorage.getItem('cism_history')
+    if (savedHistory) setHistory(JSON.parse(savedHistory))
+
+    const savedSession = localStorage.getItem('cism_current_session')
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession)
+        // Only resume if it looks valid
+        if (session.activeQuestions && session.activeQuestions.length > 0) {
+          setActiveQuestions(session.activeQuestions)
+          setCurrentIndex(session.currentIndex)
+          setSelectedAnswer(session.selectedAnswer)
+          setSessionResults(session.sessionResults)
+          setQuizConfig(session.quizConfig)
+          setStartTime(session.startTime)
+          setTimeLeft(session.timeLeft)
+          setIsConfirmed(session.isConfirmed)
+          setView('quiz')
+        }
+      } catch (e) {
+        console.error("Failed to restore session:", e)
+      }
+    }
   }, [])
+
+  // Persistent Session Saving
+  useEffect(() => {
+    if (view === 'quiz') {
+      const session = {
+        activeQuestions,
+        currentIndex,
+        selectedAnswer,
+        sessionResults,
+        quizConfig,
+        startTime,
+        timeLeft,
+        isConfirmed
+      }
+      localStorage.setItem('cism_current_session', JSON.stringify(session))
+    }
+  }, [activeQuestions, currentIndex, selectedAnswer, sessionResults, quizConfig, startTime, timeLeft, isConfirmed, view])
 
   // Fetch data
   useEffect(() => {
@@ -253,6 +291,7 @@ function App() {
     const updatedHistory = [newResult, ...history]
     setHistory(updatedHistory)
     localStorage.setItem('cism_history', JSON.stringify(updatedHistory))
+    localStorage.removeItem('cism_current_session')
     setView('result')
   }
 
