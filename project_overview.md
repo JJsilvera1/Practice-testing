@@ -65,3 +65,12 @@ CISM Mastery is a specialized web-based quiz application designed for CISM (Cert
 - **Maximum Scaled Score**: 800
 - **Passing Threshold**: 450
 - *Note: No individual domain cutoffs are required; the total weighted score is the determining factor.*
+
+## 🚀 Vercel Deployment Instructions
+To host this application on Vercel:
+1. **Repository Setup**: If your project is in a monorepo, ensure you point the **Root Directory** to `quiz-app` in the Vercel dashboard.
+2. **Build Settings**:
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+   - **Framework Preset**: `Vite`
+3. **Domain & Routing**: The included `vercel.json` handles all SPA routing and security headers automatically.

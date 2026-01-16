@@ -121,11 +121,34 @@ function App() {
         ...pickLeastSeen(d4, counts[4])
       ].sort(() => Math.random() - 0.5);
     } else {
-      let filtered = [...allQuestions]
-      if (quizConfig.domains.length > 0) {
-        filtered = filtered.filter(q => q.domain && quizConfig.domains.includes(q.domain))
-      }
-      shuffled = pickLeastSeen(filtered, quizConfig.count);
+      const selectedDomains = quizConfig.domains.length > 0 ? quizConfig.domains : [1, 2, 3, 4];
+      const officialWeights: Record<number, number> = { 1: 0.17, 2: 0.20, 3: 0.33, 4: 0.30 };
+
+      // Calculate total weight of selected domains to normalize them
+      const totalSelectedWeight = selectedDomains.reduce((acc, d) => acc + (officialWeights[d] || 0), 0);
+
+      const weightedQuestions: Question[] = [];
+      let currentTotal = 0;
+
+      selectedDomains.forEach((d, idx) => {
+        const domainPool = allQuestions.filter(q => q.domain === d);
+
+        // Calculate proportional share
+        let takeCount = Math.round(((officialWeights[d] || 0) / totalSelectedWeight) * quizConfig.count);
+
+        // Final adjustment to ensure we match the exact requested count due to rounding
+        if (idx === selectedDomains.length - 1) {
+          takeCount = quizConfig.count - currentTotal;
+        }
+
+        // Don't try to take more than available, though pool is 1000 so unlikely
+        takeCount = Math.max(0, takeCount);
+        currentTotal += takeCount;
+
+        weightedQuestions.push(...pickLeastSeen(domainPool, takeCount));
+      });
+
+      shuffled = weightedQuestions.sort(() => Math.random() - 0.5);
     }
 
     setActiveQuestions(shuffled)
