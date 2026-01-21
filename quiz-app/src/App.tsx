@@ -480,8 +480,22 @@ function App() {
                   {history.slice(0, 4).map(res => (
                     <div key={res.id} className="glass p-5 flex justify-between items-center group hover:border-indigo-500/30 transition-all">
                       <div>
-                        <div className="text-xs text-slate-500 font-bold mb-1">{res.date}</div>
-                        <div className="text-xl font-bold">{res.score} <span className="text-slate-500 text-sm font-normal">/ {res.total}</span></div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="text-xs text-slate-500 font-bold">{res.date}</div>
+                          {res.scaledScore !== undefined && (
+                            <div className={`px-2 py-0.5 rounded text-[9px] font-black tracking-tighter ${res.scaledScore >= 450 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/20 text-rose-400 border border-rose-500/20'}`}>
+                              {res.scaledScore >= 450 ? 'PASS' : 'FAIL'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <div className="text-xl font-bold">{res.score} <span className="text-slate-500 text-sm font-normal">/ {res.total}</span></div>
+                          {res.scaledScore !== undefined && (
+                            <div className="text-[10px] font-mono font-bold text-slate-500">
+                              [<span className="text-indigo-400">{res.scaledScore}</span>]
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="text-[10px] text-slate-500 font-bold uppercase mb-1">Time Spent</div>
