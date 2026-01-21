@@ -18,6 +18,7 @@ A professional-grade, high-performance study platform for CISM (Certified Inform
 - **Training & Quiz Modes**: 
   - *Training*: Instant feedback with comprehensive rationales.
   - *Quiz/Exam*: Hidden outcomes to simulate real-world testing conditions.
+- **Flag for Review**: Flag difficult questions during a session and review them later in the results phase, regardless of whether you got them right.
 
 ### 2. Offline Resilience (New) 📴
 - **PWA (Progressive Web App)**: Install the app on your desktop or mobile. The service worker caches all assets and question data, allowing for 100% offline study sessions.

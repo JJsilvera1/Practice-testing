@@ -30,6 +30,7 @@ CISM Mastery is a specialized web-based quiz application designed for CISM (Cert
   - Active/Disabled timer settings.
   - **Training Mode**: Immediate feedback and comprehensive rationales after every question.
   - **Quiz Mode**: Hidden outcomes until the final results page to simulate exam conditions.
+  - **Question Flagging**: Ability to mark questions for review during the session, with dedicated status badges in the post-quiz analysis.
 
 ### 3. Advanced Analytics & Scoring
 - **Official Scaled Scoring**: Implements the ISACA 200-800 scale.

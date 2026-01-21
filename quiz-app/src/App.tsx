@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight, BookOpen, Clock, Sun, Moon } from 'lucide-react'
+import { ChevronRight, BookOpen, Clock, Sun, Moon, Flag } from 'lucide-react'
 
 interface Question {
   number: string;
@@ -22,6 +22,7 @@ interface QuizResult {
     question: Question;
     userAnswer: string;
     isCorrect: boolean;
+    isFlagged: boolean;
   }>;
 }
 
@@ -46,6 +47,7 @@ function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [isConfirmed, setIsConfirmed] = useState(false)
   const [bankOpen, setBankOpen] = useState(false)
+  const [flaggedQuestions, setFlaggedQuestions] = useState<Record<number, boolean>>({})
 
   // Load history & session
   useEffect(() => {
@@ -66,6 +68,7 @@ function App() {
           setStartTime(session.startTime)
           setTimeLeft(session.timeLeft)
           setIsConfirmed(session.isConfirmed)
+          setFlaggedQuestions(session.flaggedQuestions || {})
           setView('quiz')
         }
       } catch (e) {
@@ -85,11 +88,12 @@ function App() {
         quizConfig,
         startTime,
         timeLeft,
-        isConfirmed
+        isConfirmed,
+        flaggedQuestions
       }
       localStorage.setItem('cism_current_session', JSON.stringify(session))
     }
-  }, [activeQuestions, currentIndex, selectedAnswer, sessionResults, quizConfig, startTime, timeLeft, isConfirmed, view])
+  }, [activeQuestions, currentIndex, selectedAnswer, sessionResults, quizConfig, startTime, timeLeft, isConfirmed, flaggedQuestions, view])
 
   // Fetch data
   useEffect(() => {
@@ -196,6 +200,7 @@ function App() {
     setView('quiz')
     setStartTime(Date.now())
     setIsConfirmed(false)
+    setFlaggedQuestions({})
     if (quizConfig.sessionType === 'exam') {
       setTimeLeft(240 * 60) // 4 Hours
     } else if (quizConfig.useTimer) {
@@ -208,7 +213,19 @@ function App() {
   const handleSelect = (key: string) => {
     if (isConfirmed) return
     setSelectedAnswer(key)
-    // Note: sessionResults update moved to confirmation step
+  }
+
+  const toggleFlag = (index: number) => {
+    setFlaggedQuestions(prev => {
+      const newState = { ...prev, [index]: !prev[index] };
+      // Sync with sessionResults if it's already been recorded (e.g. training mode after confirm)
+      if (sessionResults.length > index) {
+        setSessionResults(prevResults => prevResults.map((item, i) =>
+          i === index ? { ...item, isFlagged: newState[index] } : item
+        ));
+      }
+      return newState;
+    })
   }
 
   const recordCurrentResult = () => {
@@ -223,7 +240,8 @@ function App() {
     setSessionResults(prev => [...prev, {
       question: current,
       userAnswer: selectedAnswer,
-      isCorrect: selectedAnswer === current.answer
+      isCorrect: selectedAnswer === current.answer,
+      isFlagged: !!flaggedQuestions[currentIndex]
     }])
   }
 
@@ -485,6 +503,13 @@ function App() {
                 {activeQuestions[currentIndex].domain && (
                   <span className="px-3 py-1 glass bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">Domain {activeQuestions[currentIndex].domain}</span>
                 )}
+                <button
+                  onClick={() => toggleFlag(currentIndex)}
+                  className={`p-1.5 rounded-lg border transition-all ${flaggedQuestions[currentIndex] ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-white/5 border-white/10 text-slate-500 hover:text-slate-400'}`}
+                  title="Flag for review"
+                >
+                  <Flag size={14} fill={flaggedQuestions[currentIndex] ? "currentColor" : "none"} />
+                </button>
               </div>
               <div className="h-1 flex-1 bg-indigo-500/10 rounded-full overflow-hidden ml-4">
                 <motion.div animate={{ width: `${((currentIndex + 1) / activeQuestions.length) * 100}%` }} className="h-full bg-indigo-500" />
@@ -632,6 +657,11 @@ function App() {
                       <span className="text-[9px] font-bold text-slate-500 bg-white/5 px-2 py-0.5 rounded uppercase tracking-wider">Number {res.question.number}</span>
                       {res.question.domain && (
                         <span className="text-[9px] font-bold text-amber-500/80 bg-amber-500/5 px-2 py-0.5 rounded uppercase tracking-wider border border-amber-500/10">Domain {res.question.domain}</span>
+                      )}
+                      {res.isFlagged && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 text-[9px] font-bold uppercase tracking-wider border border-rose-500/20">
+                          <Flag size={10} fill="currentColor" /> Flagged
+                        </span>
                       )}
                     </div>
                     <p className="text-sm font-medium mb-4 italic text-slate-200">{res.question.question}</p>
