@@ -42,7 +42,7 @@ function App() {
   })
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [sessionResults, setSessionResults] = useState<QuizResult['questions']>([])
-  const [filter, setFilter] = useState<'all' | 'correct' | 'wrong'>('all')
+  const [filter, setFilter] = useState<'all' | 'correct' | 'wrong' | 'flagged'>('all')
   const [startTime, setStartTime] = useState<number>(0)
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [isConfirmed, setIsConfirmed] = useState(false)
@@ -660,13 +660,19 @@ function App() {
               <div className="flex justify-between items-end px-2">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Question Review</h3>
                 <div className="flex gap-2">
-                  {(['all', 'correct', 'wrong'] as const).map(f => (
+                  {(['all', 'correct', 'wrong', 'flagged'] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 text-[10px] font-bold glass uppercase transition-all ${filter === f ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:text-slate-400'}`}>{f}</button>
                   ))}
                 </div>
               </div>
               <div className="space-y-4 pb-20">
-                {sessionResults.filter(r => filter === 'all' ? true : (filter === 'correct' ? r.isCorrect : !r.isCorrect)).map((res, i) => (
+                {sessionResults.filter(r => {
+                  if (filter === 'all') return true;
+                  if (filter === 'correct') return r.isCorrect;
+                  if (filter === 'wrong') return !r.isCorrect;
+                  if (filter === 'flagged') return r.isFlagged;
+                  return true;
+                }).map((res, i) => (
                   <div key={i} className={`glass p-6 border-l-4 transition-all ${res.isCorrect ? 'border-l-emerald-500 shadow-emerald-500/5' : 'border-l-rose-500 shadow-rose-500/5'}`}>
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-[9px] font-bold text-slate-500 bg-white/5 px-2 py-0.5 rounded uppercase tracking-wider">Number {res.question.number}</span>
