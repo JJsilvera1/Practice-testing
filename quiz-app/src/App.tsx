@@ -148,50 +148,28 @@ function App() {
     };
 
     let shuffled: Question[] = [];
+    const isExam = quizConfig.sessionType === 'exam';
+    const totalCount = isExam ? 150 : quizConfig.count;
+    const selectedDomains = quizConfig.domains.length > 0 ? quizConfig.domains : [1, 2, 3, 4];
 
-    if (quizConfig.sessionType === 'exam') {
-      const counts = { 1: 26, 2: 30, 3: 50, 4: 44 };
-      const d1 = allQuestions.filter(q => q.domain === 1);
-      const d2 = allQuestions.filter(q => q.domain === 2);
-      const d3 = allQuestions.filter(q => q.domain === 3);
-      const d4 = allQuestions.filter(q => q.domain === 4);
+    const selection: Question[] = [];
 
-      shuffled = [
-        ...pickLeastSeen(d1, counts[1]),
-        ...pickLeastSeen(d2, counts[2]),
-        ...pickLeastSeen(d3, counts[3]),
-        ...pickLeastSeen(d4, counts[4])
-      ].sort(() => Math.random() - 0.5);
-    } else {
-      const selectedDomains = quizConfig.domains.length > 0 ? quizConfig.domains : [1, 2, 3, 4];
-      const officialWeights: Record<number, number> = { 1: 0.17, 2: 0.20, 3: 0.33, 4: 0.30 };
+    selectedDomains.forEach((d, idx) => {
+      const domainPool = allQuestions.filter(q => q.domain === d);
 
-      // Calculate total weight of selected domains to normalize them
-      const totalSelectedWeight = selectedDomains.reduce((acc, d) => acc + (officialWeights[d] || 0), 0);
+      // Calculate equal share among selected domains
+      let takeCount = Math.floor(totalCount / selectedDomains.length);
 
-      const weightedQuestions: Question[] = [];
-      let currentTotal = 0;
+      // Distribute remainder (e.g. 150/4 = 37 with 2 remaining)
+      if (idx < totalCount % selectedDomains.length) {
+        takeCount++;
+      }
 
-      selectedDomains.forEach((d, idx) => {
-        const domainPool = allQuestions.filter(q => q.domain === d);
+      takeCount = Math.max(0, takeCount);
+      selection.push(...pickLeastSeen(domainPool, takeCount));
+    });
 
-        // Calculate proportional share
-        let takeCount = Math.round(((officialWeights[d] || 0) / totalSelectedWeight) * quizConfig.count);
-
-        // Final adjustment to ensure we match the exact requested count due to rounding
-        if (idx === selectedDomains.length - 1) {
-          takeCount = quizConfig.count - currentTotal;
-        }
-
-        // Don't try to take more than available, though pool is 1000 so unlikely
-        takeCount = Math.max(0, takeCount);
-        currentTotal += takeCount;
-
-        weightedQuestions.push(...pickLeastSeen(domainPool, takeCount));
-      });
-
-      shuffled = weightedQuestions.sort(() => Math.random() - 0.5);
-    }
+    shuffled = selection.sort(() => Math.random() - 0.5);
 
     setActiveQuestions(shuffled)
     setCurrentIndex(0)
@@ -201,7 +179,7 @@ function App() {
     setStartTime(Date.now())
     setIsConfirmed(false)
     setFlaggedQuestions({})
-    if (quizConfig.sessionType === 'exam') {
+    if (isExam) {
       setTimeLeft(240 * 60) // 4 Hours
     } else if (quizConfig.useTimer) {
       setTimeLeft(quizConfig.timerMinutes * 60)
@@ -465,7 +443,7 @@ function App() {
                       <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                       <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">High-Stakes Mode Active</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed italic">The <span className="text-slate-200 font-bold">Official Exam</span> simulates the real CISM test. You will have <span className="text-amber-400 font-bold">4 Hours</span> to complete <span className="text-amber-400 font-bold">150 Questions</span> sampled across all domains according to ISACA weights.</p>
+                    <p className="text-[11px] text-slate-400 leading-relaxed italic">The <span className="text-slate-200 font-bold">Official Exam</span> simulates the real CISM test. You will have <span className="text-amber-400 font-bold">4 Hours</span> to complete <span className="text-amber-400 font-bold">150 Questions</span> sampled equally across selected domains, with scoring weighted by official ISACA standards.</p>
                   </div>
                 )}
 
