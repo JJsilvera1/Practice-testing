@@ -124,7 +124,7 @@ function App() {
 
   // Timer logic
   useEffect(() => {
-    if (view === 'quiz' && quizConfig.useTimer && timeLeft !== null && timeLeft > 0) {
+    if (view === 'quiz' && timeLeft !== null && timeLeft > 0) {
       const timer = setInterval(() => setTimeLeft(prev => (prev! > 0 ? prev! - 1 : 0)), 1000)
       return () => clearInterval(timer)
     } else if (timeLeft === 0) {
@@ -553,7 +553,7 @@ function App() {
               })}
             </div>
 
-            {selectedAnswer && quizConfig.sessionType === 'quiz' && (
+            {selectedAnswer && (quizConfig.sessionType === 'quiz' || quizConfig.sessionType === 'exam') && (
               <button
                 onClick={handleNext}
                 className="w-full py-4 glass bg-indigo-500 text-white font-bold flex items-center justify-center gap-2 transition-all hover:bg-indigo-600 shadow-xl"
