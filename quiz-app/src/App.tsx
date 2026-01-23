@@ -635,11 +635,11 @@ function App() {
             )}
 
             <div className="space-y-4">
-              <div className="flex justify-between items-end px-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 px-2 mb-4">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Question Review</h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 no-print">
                   {(['all', 'correct', 'wrong', 'flagged'] as const).map(f => (
-                    <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1 text-[10px] font-bold glass uppercase transition-all ${filter === f ? 'bg-indigo-500 text-white' : 'text-slate-500 hover:text-slate-400'}`}>{f}</button>
+                    <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 text-[11px] font-bold glass uppercase transition-all rounded-xl ${filter === f ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'}`}>{f}</button>
                   ))}
                 </div>
               </div>
